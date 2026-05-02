@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Clapper — one-time setup script
-# Run once after cloning: bash setup.sh
+# Run once after cloning: ./setup.sh
 
 set -e
 
@@ -23,12 +23,12 @@ fi
 echo "${GREEN}✓${NC} Node.js $(node --version)"
 
 # ── pnpm ─────────────────────────────────────────────────────────────────────
-if ! command -v pnpm &>/dev/null; then
+PNPM=$(command -v pnpm 2>/dev/null || echo "$HOME/.local/bin/pnpm")
+if ! "$PNPM" --version &>/dev/null 2>&1; then
   echo "${YELLOW}→ Installing pnpm...${NC}"
   npm install -g pnpm --prefix ~/.local 2>/dev/null || npm install -g pnpm
+  PNPM=$(command -v pnpm 2>/dev/null || echo "$HOME/.local/bin/pnpm")
 fi
-
-PNPM=$(command -v pnpm || echo "$HOME/.local/bin/pnpm")
 echo "${GREEN}✓${NC} pnpm $($PNPM --version)"
 
 # ── Dependencies ─────────────────────────────────────────────────────────────
@@ -38,27 +38,44 @@ echo "${GREEN}✓${NC} Dependencies installed"
 
 # ── .env.local ───────────────────────────────────────────────────────────────
 if [ ! -f .env.local ]; then
-  cp .env.local.example .env.local
+  if [ -f .env.local.example ]; then
+    cp .env.local.example .env.local
+  else
+    # Create it from scratch in case .env.local.example was gitignored
+    cat > .env.local << 'ENVEOF'
+# Supabase — https://supabase.com/dashboard/project/_/settings/api
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# TMDB — https://www.themoviedb.org/settings/api
+TMDB_API_KEY=your_tmdb_api_key
+TMDB_API_READ_ACCESS_TOKEN=your_tmdb_read_access_token
+ENVEOF
+  fi
+
   echo ""
-  echo "${YELLOW}⚠  .env.local created from example.${NC}"
-  echo "   Open .env.local and fill in your keys before starting the app:"
+  echo "${YELLOW}⚠  .env.local created. Fill in your API keys:${NC}"
   echo ""
-  echo "   ${BOLD}NEXT_PUBLIC_SUPABASE_URL${NC}         → Supabase project → Settings → API"
-  echo "   ${BOLD}NEXT_PUBLIC_SUPABASE_ANON_KEY${NC}    → Supabase project → Settings → API"
-  echo "   ${BOLD}SUPABASE_SERVICE_ROLE_KEY${NC}        → Supabase project → Settings → API"
-  echo "   ${BOLD}TMDB_API_READ_ACCESS_TOKEN${NC}       → themoviedb.org → Settings → API"
-  echo "   ${BOLD}TMDB_API_KEY${NC}                     → themoviedb.org → Settings → API"
+  echo "   ${BOLD}Supabase${NC} (https://supabase.com/dashboard/project/_/settings/api)"
+  echo "   • NEXT_PUBLIC_SUPABASE_URL"
+  echo "   • NEXT_PUBLIC_SUPABASE_ANON_KEY"
+  echo "   • SUPABASE_SERVICE_ROLE_KEY"
   echo ""
-  echo "   Also run the database migration:"
-  echo "   Paste ${BOLD}supabase/migrations/0001_init.sql${NC} into your Supabase SQL editor."
+  echo "   ${BOLD}TMDB${NC} (https://www.themoviedb.org/settings/api)"
+  echo "   • TMDB_API_READ_ACCESS_TOKEN"
+  echo "   • TMDB_API_KEY"
+  echo ""
+  echo "   ${BOLD}Database migration${NC}"
+  echo "   Paste supabase/migrations/0001_init.sql into your Supabase SQL editor."
   echo ""
 
-  # Try to open .env.local in the default editor
+  # Open .env.local in editor
   if command -v code &>/dev/null; then
     echo "${YELLOW}→ Opening .env.local in VS Code...${NC}"
     code .env.local
   elif command -v open &>/dev/null; then
-    open .env.local
+    open -e .env.local
   fi
 else
   echo "${GREEN}✓${NC} .env.local already exists"
@@ -68,7 +85,7 @@ echo ""
 echo "${GREEN}${BOLD}Setup complete!${NC}"
 echo ""
 echo "Next steps:"
-echo "  1. Fill in .env.local with your API keys (if you haven't yet)"
-echo "  2. Run the SQL migration in your Supabase project"
-echo "  3. Start the app:  ${BOLD}./start.sh${NC}   (or: pnpm dev)"
+echo "  1. Fill in .env.local with your API keys (if not done yet)"
+echo "  2. Run the SQL migration in your Supabase SQL editor"
+echo "  3. ${BOLD}./start.sh${NC}   ← start the app"
 echo ""
